@@ -31,8 +31,8 @@ namespace DocumentDB.GetStarted
         // Read the DocumentDB endpointUrl and authorizationKey from config file
         // WARNING: Never store credentials in source code
         // For more information, visit http://azure.microsoft.com/blog/2013/07/17/windows-azure-web-sites-how-application-strings-and-connection-strings-work/
-        private const string EndpointUrl = "https://anhoh-westus.documents.azure.com:443/";
-        private const string AuthorizationKey = "scADAI3hp1Jq0Gd9Fi4IhrRRr/cSpfFcqeLbv7c9vDVFbV6vMTaWanF76qdUkJpaAHnt7nVbO4DYfZqmJE5nKA==";
+        private static readonly string EndpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
+        private static readonly string AuthorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
 
         public static void Main(string[] args)
         {
@@ -122,6 +122,7 @@ namespace DocumentDB.GetStarted
                     IsRegistered = true
                 };
 
+                // id based routing for the first argument, "dbs/FamilyRegistry/colls/FamilyCollection"
                 await client.CreateDocumentAsync("dbs/" + database.Id + "/colls/" + documentCollection.Id, andersonFamily);
 
                 WriteMessage("Created dbs/FamilyRegistry/colls/FamilyCollection/docs/AndersenFamily");
@@ -162,6 +163,7 @@ namespace DocumentDB.GetStarted
                     IsRegistered = false
                 };
 
+                // id based routing for the first argument, "dbs/FamilyRegistry/colls/FamilyCollection"
                 await client.CreateDocumentAsync("dbs/" + database.Id + "/colls/" + documentCollection.Id, wakefieldFamily);
 
                 WriteMessage("Created dbs/FamilyRegistry/colls/FamilyCollection/docs/WakefieldFamily");

@@ -1,2 +1,1 @@
-# How to contribute
-coming soon...
+Please read the contributing guidelines from the [Azure Team](http://azure.github.io/guidelines.html "Azure Team")
