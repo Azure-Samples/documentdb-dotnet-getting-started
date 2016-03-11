@@ -128,7 +128,7 @@ namespace DocumentDB.GetStarted
                 WriteMessage("Created dbs/FamilyRegistry/colls/FamilyCollection/docs/AndersenFamily");
             }
 
-            // Check to verify a document with the id=AndersenFamily does not exist
+            // Check to verify a document with the id=WakefieldFamily does not exist
             document = client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id).Where(d => d.Id == "WakefieldFamily").AsEnumerable().FirstOrDefault();
 
             if (document == null)
