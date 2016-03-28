@@ -39,6 +39,6 @@ The code included in this sample is intended to get you quickly started with a .
 
 ## More information
 
-- [Azure DocumentDB Documentation](https://azure.microsoft.com/en-us/documentation/services/documentdb/)
+- [Azure DocumentDB Documentation](https://azure.microsoft.com/documentation/services/documentdb/)
 - [Azure DocumentDB .NET SDK](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/)
 - [Azure DocumentDB .NET SDK Reference Documentation](https://msdn.microsoft.com/library/azure/dn948556.aspx)
