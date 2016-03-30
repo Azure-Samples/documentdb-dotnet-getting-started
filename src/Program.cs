@@ -1,4 +1,5 @@
 ﻿//--------------------------------------------------------------------------------- 
+// <copyright file="Program.cs" company="Microsoft">
 // Microsoft (R)  Azure SDK 
 // Software Development Kit 
 //  
@@ -7,38 +8,52 @@
 // THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,  
 // EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES  
 // OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.  
+// </copyright>
 //---------------------------------------------------------------------------------
 
 namespace DocumentDB.GetStarted
 {
     using System;
     using System.Configuration;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
+    using System.Net;
     using System.Threading.Tasks;
-
-    // Add DocumentDB references
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
-    using Microsoft.Azure.Documents.Linq;
     using Newtonsoft.Json;
 
     /// <summary>
-    /// This get-started sample demonstrates the creation of resources and execution of simple queries
-    /// For more detailed samples with best practices, visit http://code.msdn.microsoft.com/Azure-DocumentDB-NET-Code-6b3da8af
+    /// This get-started sample demonstrates the creation of resources and execution of simple queries.  
     /// </summary>
+    [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "For illustration purposes.")]
     public class Program
     {
-        // Read the DocumentDB endpointUrl and authorizationKey from config file
-        // WARNING: Never store credentials in source code
-        // For more information, visit http://azure.microsoft.com/blog/2013/07/17/windows-azure-web-sites-how-application-strings-and-connection-strings-work/
+        /// <summary>
+        /// The Azure DocumentDB endpoint for running this GetStarted sample.
+        /// </summary>
         private static readonly string EndpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
+
+        /// <summary>
+        /// The authorization key for the Azure DocumentDB account.
+        /// </summary>
         private static readonly string AuthorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
 
+        /// <summary>
+        /// The DocumentDB client instance.
+        /// </summary>
+        private DocumentClient client;
+
+        /// <summary>
+        /// The main method for the demo
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
         public static void Main(string[] args)
         {
             try
             {
-                GetStartedDemo().Wait();
+                Program p = new Program();
+                p.GetStartedDemo().Wait();
             }
             catch (DocumentClientException de)
             {
@@ -57,199 +72,311 @@ namespace DocumentDB.GetStarted
             }
         }
 
-        private static async Task GetStartedDemo()
+        /// <summary>
+        /// Run the get started demo for Azure DocumentDB. This creates a database, collection, two documents, executes a simple query 
+        /// and cleans up.
+        /// </summary>
+        /// <returns>The Task for asynchronous completion.</returns>
+        private async Task GetStartedDemo()
         {
             // Create a new instance of the DocumentClient
-            var client = new DocumentClient(new Uri(EndpointUrl), AuthorizationKey);
+            this.client = new DocumentClient(new Uri(EndpointUrl), AuthorizationKey);
 
-            // Check to verify a database with the id=FamilyRegistry does not exist
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == "FamilyRegistry").AsEnumerable().FirstOrDefault();
+            await this.CreateDatabaseIfNotExists("FamilyDB");
 
-            // If the database does not exist, create a new database
-            if (database == null)
+            await this.CreateDocumentCollectionIfNotExists("FamilyDB", "FamilyCollection");
+
+            // Insert a document, here we create a Family object
+            Family andersenFamily = new Family
             {
-                database = await client.CreateDatabaseAsync(
-                    new Database
-                    {
-                        Id = "FamilyRegistry"
-                    });
-
-                WriteMessage("Created dbs/FamilyRegistry");
-            }
-
-            // Check to verify a document collection with the id=FamilyCollection does not exist
-            DocumentCollection documentCollection = client.CreateDocumentCollectionQuery("dbs/" + database.Id).Where(c => c.Id == "FamilyCollection").AsEnumerable().FirstOrDefault();
-
-            // If the document collection does not exist, create a new collection
-            if (documentCollection == null)
-            {
-                documentCollection = await client.CreateDocumentCollectionAsync("dbs/" + database.Id,
-                    new DocumentCollection
-                    {
-                        Id = "FamilyCollection"
-                    });
-
-                WriteMessage("Created dbs/FamilyRegistry/colls/FamilyCollection");
-            }
-
-            // Check to verify a document with the id=AndersenFamily does not exist
-            Document document = client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id).Where(d => d.Id == "AndersenFamily").AsEnumerable().FirstOrDefault();
-
-            // If the document does not exist, create a new document
-            if (document == null)
-            {
-                // Create the Andersen Family document
-                Family andersonFamily = new Family
+                Id = "Andersen.1",
+                LastName = "Andersen",
+                Parents = new Parent[] 
                 {
-                    Id = "AndersenFamily",
-                    LastName = "Andersen",
-                    Parents = new Parent[] {
-                        new Parent { FirstName = "Thomas" },
-                        new Parent { FirstName = "Mary Kay"}
-                    },
-                    Children = new Child[] {
-                        new Child
-                        { 
-                            FirstName = "Henriette Thaulow", 
-                            Gender = "female", 
-                            Grade = 5, 
-                            Pets = new Pet[] {
-                                new Pet { GivenName = "Fluffy" } 
-                            }
-                        } 
-                    },
-                    Address = new Address { State = "WA", County = "King", City = "Seattle" },
-                    IsRegistered = true
-                };
-
-                // id based routing for the first argument, "dbs/FamilyRegistry/colls/FamilyCollection"
-                await client.CreateDocumentAsync("dbs/" + database.Id + "/colls/" + documentCollection.Id, andersonFamily);
-
-                WriteMessage("Created dbs/FamilyRegistry/colls/FamilyCollection/docs/AndersenFamily");
-            }
-
-            // Check to verify a document with the id=WakefieldFamily does not exist
-            document = client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id).Where(d => d.Id == "WakefieldFamily").AsEnumerable().FirstOrDefault();
-
-            if (document == null)
-            {
-                // Create the WakeField document
-                Family wakefieldFamily = new Family
+                    new Parent { FirstName = "Thomas" },
+                    new Parent { FirstName = "Mary Kay" }
+                },
+                Children = new Child[] 
                 {
-                    Id = "WakefieldFamily",
-                    Parents = new Parent[] {
-                        new Parent { FamilyName= "Wakefield", FirstName= "Robin" },
-                        new Parent { FamilyName= "Miller", FirstName= "Ben" }
-                    },
-                    Children = new Child[] {
-                        new Child {
-                            FamilyName= "Merriam", 
-                            FirstName= "Jesse", 
-                            Gender= "female", 
-                            Grade= 8,
-                            Pets= new Pet[] {
-                                new Pet { GivenName= "Goofy" },
-                                new Pet { GivenName= "Shadow" }
-                            }
-                        },
-                        new Child {
-                            FamilyName= "Miller", 
-                            FirstName= "Lisa", 
-                            Gender= "female", 
-                            Grade= 1
+                    new Child
+                    {
+                        FirstName = "Henriette Thaulow",
+                        Gender = "female",
+                        Grade = 5,
+                        Pets = new Pet[] 
+                        {
+                            new Pet { GivenName = "Fluffy" }
+                        }
+                    }
+                },
+                District = "WA5",
+                Address = new Address { State = "WA", County = "King", City = "Seattle" },
+                IsRegistered = true
+            };
+
+            await this.CreateFamilyDocumentIfNotExists("FamilyDB", "FamilyCollection", andersenFamily);
+
+            Family wakefieldFamily = new Family
+            {
+                Id = "Wakefield.7",
+                LastName = "Wakefield",
+                Parents = new Parent[]
+                {
+                    new Parent { FamilyName = "Wakefield", FirstName = "Robin" },
+                    new Parent { FamilyName = "Miller", FirstName = "Ben" }
+                },
+                Children = new Child[]
+                {
+                    new Child
+                    {
+                        FamilyName = "Merriam",
+                        FirstName = "Jesse",
+                        Gender = "female",
+                        Grade = 8,
+                        Pets = new Pet[]
+                        {
+                            new Pet { GivenName = "Goofy" },
+                            new Pet { GivenName = "Shadow" }
                         }
                     },
-                    Address = new Address { State = "NY", County = "Manhattan", City = "NY" },
-                    IsRegistered = false
-                };
+                    new Child
+                    {
+                        FamilyName = "Miller",
+                        FirstName = "Lisa",
+                        Gender = "female",
+                        Grade = 1
+                    }
+                },
+                District = "NY23",
+                Address = new Address { State = "NY", County = "Manhattan", City = "NY" },
+                IsRegistered = false
+            };
 
-                // id based routing for the first argument, "dbs/FamilyRegistry/colls/FamilyCollection"
-                await client.CreateDocumentAsync("dbs/" + database.Id + "/colls/" + documentCollection.Id, wakefieldFamily);
+            await this.CreateFamilyDocumentIfNotExists("FamilyDB", "FamilyCollection", wakefieldFamily);
 
-                WriteMessage("Created dbs/FamilyRegistry/colls/FamilyCollection/docs/WakefieldFamily");
-            }
-
-            // Query the documents using DocumentDB SQL for the Andersen family
-            var families = client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id,
-                "SELECT * " +
-                "FROM Families f " +
-                "WHERE f.id = \"AndersenFamily\"");
-
-            foreach (var family in families)
-            {
-                Console.WriteLine("\tRead {0} from SQL", family);
-            }
-
-            // Query the documents using LINQ for the Andersen family
-            families =
-                from f in client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id)
-                where f.Id == "AndersenFamily"
-                select f;
-
-            foreach (var family in families)
-            {
-                Console.WriteLine("Read {0} from LINQ", family);
-            }
-
-            // Query the documents using LINQ lambdas for the Andersen family
-            families = client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id)
-                .Where(f => f.Id == "AndersenFamily")
-                .Select(f => f);
-
-            foreach (var family in families)
-            {
-                Console.WriteLine("\tRead {0} from LINQ query", family);
-            }
+            this.ExecuteSimpleQuery("FamilyDB", "FamilyCollection");
 
             // Clean up/delete the database and client
-            await client.DeleteDatabaseAsync("dbs/" + database.Id);
-            client.Dispose();
+            await this.client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri("FamilyDB"));
         }
 
-        private static void WriteMessage(string msg)
+        /// <summary>
+        /// Create a database with the specified name if it doesn't exist. 
+        /// </summary>
+        /// <param name="databaseName">The name/ID of the database.</param>
+        /// <returns>The Task for asynchronous execution.</returns>
+        private async Task CreateDatabaseIfNotExists(string databaseName)
         {
-            Console.WriteLine(msg);
+            // Check to verify a database with the id=FamilyDB does not exist
+            try
+            {
+                await this.client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
+            }
+            catch (DocumentClientException de)
+            {
+                // If the database does not exist, create a new database
+                if (de.StatusCode == HttpStatusCode.NotFound)
+                {
+                    await this.client.CreateDatabaseAsync(new Database { Id = databaseName });
+                    this.WriteToConsoleAndPromptToContinue("Created {0}", databaseName);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Create a collection with the specified name if it doesn't exist.
+        /// </summary>
+        /// <param name="databaseName">The name/ID of the database.</param>
+        /// <param name="collectionName">The name/ID of the collection.</param>
+        /// <returns>The Task for asynchronous execution.</returns>
+        private async Task CreateDocumentCollectionIfNotExists(string databaseName, string collectionName)
+        {
+            try
+            {
+                await this.client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseName, collectionName));
+            }
+            catch (DocumentClientException de)
+            {
+                // If the document collection does not exist, create a new collection
+                if (de.StatusCode == HttpStatusCode.NotFound)
+                {
+                    DocumentCollection collectionInfo = new DocumentCollection();
+                    collectionInfo.Id = collectionName;
+
+                    // Optionally, you can configure the indexing policy of a collection. Here we configure collections for maximum query flexibility 
+                    // including string range queries. 
+                    collectionInfo.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
+
+                    // Optionally, you can configure the partitioning scheme of a collection. Here we configure it to the US District property since we 
+                    // are recording census data for families. You can omit this for collections with low storage  (under 10 GB) and throughput requirements
+                    collectionInfo.PartitionKey.Paths.Add("/District");
+
+                    // DocumentDB collections can be reserved with throughput specified in request units/second. 1 RU is a normalized request equivalent to the read
+                    // of a 1KB document.  Here we create a collection with 400 RU/s. 
+                    await this.client.CreateDocumentCollectionAsync(
+                        UriFactory.CreateDatabaseUri(databaseName),
+                        new DocumentCollection { Id = collectionName },
+                        new RequestOptions { OfferThroughput = 400 });
+
+                    this.WriteToConsoleAndPromptToContinue("Created {0}", collectionName);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Create the Family document in the collection if another by the same ID doesn't already exist.
+        /// </summary>
+        /// <param name="databaseName">The name/ID of the database.</param>
+        /// <param name="collectionName">The name/ID of the collection.</param>
+        /// <param name="family">The family document to be created.</param>
+        /// <returns>The Task for asynchronous execution.</returns>
+        private async Task CreateFamilyDocumentIfNotExists(string databaseName, string collectionName, Family family)
+        {
+            try
+            {
+                await this.client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, family.Id));
+            }
+            catch (DocumentClientException de)
+            {
+                if (de.StatusCode == HttpStatusCode.NotFound)
+                {
+                    await this.client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(databaseName, collectionName), family);
+                    this.WriteToConsoleAndPromptToContinue("Created Family {0}", family.Id);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Execute a simple query using LINQ and SQL. Here we filter using the "LastName" property.
+        /// </summary>
+        /// <param name="databaseName">The name/ID of the database.</param>
+        /// <param name="collectionName">The name/ID of the collection.</param>
+        private void ExecuteSimpleQuery(string databaseName, string collectionName)
+        {
+            // Set some common query options
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1, EnableCrossPartitionQuery = true };
+
+            // Run a simple query via LINQ. DocumentDB indexes all properties, so queries can be completed efficiently and with low latency.
+            // Here we find the Andersen family via its LastName
+            IQueryable<Family> familyQuery = this.client.CreateDocumentQuery<Family>(
+                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName), queryOptions)
+                .Where(f => f.LastName == "Andersen");
+
+            // The query is executed synchronously here, but can also be executed asynchronously via the IDocumentQuery<T> interface
+            Console.WriteLine("Running LINQ query...");
+            foreach (Family family in familyQuery)
+            {
+                Console.WriteLine("\tRead {0}", family);
+            }
+
+            // Now execute the same query via direct SQL
+            IQueryable<Family> familyQueryInSql = this.client.CreateDocumentQuery<Family>(
+                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName),
+                "SELECT * FROM Family WHERE Family.lastName = 'Andersen'",
+                queryOptions);
+
+            Console.WriteLine("Running direct SQL query...");
+            foreach (Family family in familyQuery)
+            {
+                Console.WriteLine("\tRead {0}", family);
+            }
+        }
+
+        /// <summary>
+        /// Write to the console, and prompt to continue.
+        /// </summary>
+        /// <param name="format">The string to be displayed.</param>
+        /// <param name="args">Optional arguments.</param>
+        private void WriteToConsoleAndPromptToContinue(string format, params object[] args)
+        {
+            Console.WriteLine(format, args);
             Console.WriteLine("Press any key to continue ...");
             Console.ReadKey();
-            Console.Clear();
         }
 
-        internal sealed class Parent
+        /// <summary>
+        /// A Family class, e.g. storing census data about families within the United States. We use this data model throughout the 
+        /// sample to show how you can store objects within your application logic directly as JSON within Azure DocumentDB. 
+        /// </summary>
+        public class Family
+        {
+            [JsonProperty(PropertyName = "id")]
+            public string Id { get; set; }
+
+            public string LastName { get; set; }
+
+            public string District { get; set; }
+
+            public Parent[] Parents { get; set; }
+
+            public Child[] Children { get; set; }
+
+            public Address Address { get; set; }
+
+            public bool IsRegistered { get; set; }
+
+            public override string ToString()
+            {
+                return JsonConvert.SerializeObject(this);
+            }
+        }
+
+        /// <summary>
+        /// A parent class used within Family
+        /// </summary>
+        public class Parent
         {
             public string FamilyName { get; set; }
+
             public string FirstName { get; set; }
         }
 
-        internal sealed class Child
+        /// <summary>
+        /// A child class used within Family
+        /// </summary>
+        public class Child
         {
             public string FamilyName { get; set; }
+
             public string FirstName { get; set; }
+
             public string Gender { get; set; }
+
             public int Grade { get; set; }
+
             public Pet[] Pets { get; set; }
         }
 
-        internal sealed class Pet
+        /// <summary>
+        /// A pet class that belongs to a Child
+        /// </summary>
+        public class Pet
         {
             public string GivenName { get; set; }
         }
 
-        internal sealed class Address
+        /// <summary>
+        /// An address class containing data attached to a Family.
+        /// </summary>
+        public class Address
         {
             public string State { get; set; }
-            public string County { get; set; }
-            public string City { get; set; }
-        }
 
-        internal sealed class Family
-        {
-            [JsonProperty(PropertyName = "id")]
-            public string Id { get; set; }
-            public string LastName { get; set; }
-            public Parent[] Parents { get; set; }
-            public Child[] Children { get; set; }
-            public Address Address { get; set; }
-            public bool IsRegistered { get; set; }
+            public string County { get; set; }
+
+            public string City { get; set; }
         }
     }
 }

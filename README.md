@@ -13,7 +13,7 @@ For a complete end-to-end walkthrough of creating this application, please refer
 
 ## Running this sample
 
-1. Before you can run this sample, you must have the following perquisites:
+1. Before you can run this sample, you must have the following prerequisites:
 	- An active Azure DocumentDB account - If you don't have an account, refer to the [Create a DocumentDB account](https://azure.microsoft.com/en-us/documentation/articles/documentdb-create-account/) article.
 	- Visual Studio 2013 (or higher).
 
