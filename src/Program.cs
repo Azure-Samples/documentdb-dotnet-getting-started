@@ -14,11 +14,10 @@
 namespace DocumentDB.GetStarted
 {
     using System;
-    using System.Configuration;
-    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
-    using System.Net;
     using System.Threading.Tasks;
+    using System.Net;
+    using System.Configuration;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Newtonsoft.Json;
@@ -26,18 +25,17 @@ namespace DocumentDB.GetStarted
     /// <summary>
     /// This get-started sample demonstrates the creation of resources and execution of simple queries.  
     /// </summary>
-    [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:ElementsMustBeDocumented", Justification = "For illustration purposes.")]
     public class Program
     {
         /// <summary>
         /// The Azure DocumentDB endpoint for running this GetStarted sample.
         /// </summary>
-        private static readonly string EndpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
+        private static readonly string EndpointUri = ConfigurationManager.AppSettings["EndPointUri"];
 
         /// <summary>
-        /// The authorization key for the Azure DocumentDB account.
+        /// The primary key for the Azure DocumentDB account.
         /// </summary>
-        private static readonly string AuthorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
+        private static readonly string PrimaryKey = ConfigurationManager.AppSettings["PrimaryKey"];
 
         /// <summary>
         /// The DocumentDB client instance.
@@ -48,7 +46,7 @@ namespace DocumentDB.GetStarted
         /// The main method for the demo
         /// </summary>
         /// <param name="args">Command line arguments</param>
-        public static void Main(string[] args)
+        static void Main(string[] args)
         {
             try
             {
@@ -80,7 +78,7 @@ namespace DocumentDB.GetStarted
         private async Task GetStartedDemo()
         {
             // Create a new instance of the DocumentClient
-            this.client = new DocumentClient(new Uri(EndpointUrl), AuthorizationKey);
+            this.client = new DocumentClient(new Uri(EndpointUri), PrimaryKey);
 
             await this.CreateDatabaseIfNotExists("FamilyDB");
 
@@ -109,7 +107,6 @@ namespace DocumentDB.GetStarted
                         }
                     }
                 },
-                District = "WA5",
                 Address = new Address { State = "WA", County = "King", City = "Seattle" },
                 IsRegistered = true
             };
@@ -147,7 +144,6 @@ namespace DocumentDB.GetStarted
                         Grade = 1
                     }
                 },
-                District = "NY23",
                 Address = new Address { State = "NY", County = "Manhattan", City = "NY" },
                 IsRegistered = false
             };
@@ -155,6 +151,16 @@ namespace DocumentDB.GetStarted
             await this.CreateFamilyDocumentIfNotExists("FamilyDB", "FamilyCollection", wakefieldFamily);
 
             this.ExecuteSimpleQuery("FamilyDB", "FamilyCollection");
+
+            // Update the Grade of the Andersen Family child
+            andersenFamily.Children[0].Grade = 6;
+
+            await this.ReplaceFamilyDocument("FamilyDB", "FamilyCollection", "Andersen.1", andersenFamily);
+
+            this.ExecuteSimpleQuery("FamilyDB", "FamilyCollection");
+
+            // Delete the document
+            await this.DeleteFamilyDocument("FamilyDB", "FamilyCollection", "Andersen.1");
 
             // Clean up/delete the database and client
             await this.client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri("FamilyDB"));
@@ -171,6 +177,7 @@ namespace DocumentDB.GetStarted
             try
             {
                 await this.client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
+                this.WriteToConsoleAndPromptToContinue("Found {0}", databaseName);
             }
             catch (DocumentClientException de)
             {
@@ -198,6 +205,7 @@ namespace DocumentDB.GetStarted
             try
             {
                 await this.client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseName, collectionName));
+                this.WriteToConsoleAndPromptToContinue("Found {0}", collectionName);
             }
             catch (DocumentClientException de)
             {
@@ -210,10 +218,6 @@ namespace DocumentDB.GetStarted
                     // Optionally, you can configure the indexing policy of a collection. Here we configure collections for maximum query flexibility 
                     // including string range queries. 
                     collectionInfo.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
-
-                    // Optionally, you can configure the partitioning scheme of a collection. Here we configure it to the US District property since we 
-                    // are recording census data for families. You can omit this for collections with low storage  (under 10 GB) and throughput requirements
-                    collectionInfo.PartitionKey.Paths.Add("/District");
 
                     // DocumentDB collections can be reserved with throughput specified in request units/second. 1 RU is a normalized request equivalent to the read
                     // of a 1KB document.  Here we create a collection with 400 RU/s. 
@@ -243,6 +247,7 @@ namespace DocumentDB.GetStarted
             try
             {
                 await this.client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, family.Id));
+                this.WriteToConsoleAndPromptToContinue("Found {0}", family.Id);
             }
             catch (DocumentClientException de)
             {
@@ -266,7 +271,7 @@ namespace DocumentDB.GetStarted
         private void ExecuteSimpleQuery(string databaseName, string collectionName)
         {
             // Set some common query options
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1, EnableCrossPartitionQuery = true };
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
 
             // Run a simple query via LINQ. DocumentDB indexes all properties, so queries can be completed efficiently and with low latency.
             // Here we find the Andersen family via its LastName
@@ -292,6 +297,50 @@ namespace DocumentDB.GetStarted
             {
                 Console.WriteLine("\tRead {0}", family);
             }
+
+            Console.WriteLine("Press any key to continue ...");
+            Console.ReadKey();
+        }
+
+        /// <summary>
+        /// Replace the Family document in the collection.
+        /// </summary>
+        /// <param name="databaseName">The name/ID of the database.</param>
+        /// <param name="collectionName">The name/ID of the collection.</param>
+        /// <param name="familyName">The name/ID of the document</param>
+        /// <param name="updatedFamily">The family document to be replaced.</param>
+        /// <returns>The Task for asynchronous execution.</returns>
+        private async Task ReplaceFamilyDocument(string databaseName, string collectionName, string familyName, Family updatedFamily)
+        {
+            try
+            {
+                await this.client.ReplaceDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, familyName), updatedFamily);
+                this.WriteToConsoleAndPromptToContinue("Replaced Family {0}", familyName);
+            }
+            catch (DocumentClientException de)
+            {
+                throw de;
+            }
+        }
+
+        /// <summary>
+        /// Delete the Family document in the collection.
+        /// </summary>
+        /// <param name="databaseName">The name/ID of the database.</param>
+        /// <param name="collectionName">The name/ID of the collection.</param>
+        /// <param name="documentName">The name/ID of the document.</param>
+        /// <returns>The Task for asynchronous execution.</returns>
+        private async Task DeleteFamilyDocument(string databaseName, string collectionName, string documentName)
+        {
+            try
+            {
+                await this.client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, documentName));
+                Console.WriteLine("Deleted Family {0}", documentName);
+            }
+            catch (DocumentClientException de)
+            {
+                    throw de;
+            }
         }
 
         /// <summary>
@@ -316,8 +365,6 @@ namespace DocumentDB.GetStarted
             public string Id { get; set; }
 
             public string LastName { get; set; }
-
-            public string District { get; set; }
 
             public Parent[] Parents { get; set; }
 
