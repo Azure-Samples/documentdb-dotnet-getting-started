@@ -43,7 +43,7 @@ namespace DocumentDB.GetStarted
             }
             finally
             {
-                Console.WriteLine("End of demo, press any key to exit.");
+                Console.WriteLine("\nEnd of demo, press any key to exit.");
                 Console.ReadKey();
             }
         }
@@ -55,31 +55,34 @@ namespace DocumentDB.GetStarted
         /// </summary>
         static void GetStartedDemo()
         {
+            Console.WriteLine("Starting demo...");
             string endpointUri = ConfigurationManager.AppSettings["EndPointUri"];
             string primaryKey = ConfigurationManager.AppSettings["PrimaryKey"];
             var docDb = new DocumentDB(endpointUri, primaryKey, "FamilyDB", "FamilyCollection");
 
+            Console.WriteLine("Adding sample data...");
             docDb.CreateFamilyDocumentIfNotExists(Families.Andersen).Wait();
             docDb.CreateFamilyDocumentIfNotExists(Families.Wakefield).Wait();
 
+            Console.WriteLine("Reading data...");
             foreach (var family in docDb.GetFamilyLinq(Families.Andersen.LastName))
             {
-                Console.WriteLine("\tRead {0}", family);
+                Console.WriteLine("\n\tRead\n {0}", family);
             }
 
+            Console.WriteLine("Updating data...");
             // Update the Grade of the Andersen Family child
             Families.Andersen.Children[0].Grade = 6;
             docDb.ReplaceFamilyDocument(Families.Andersen.Id, Families.Andersen).Wait();
-
+            Console.WriteLine("Reading data...");
             foreach (var family in docDb.GetFamilySql(Families.Andersen.LastName))
             {
-                Console.WriteLine("\tRead {0}", family);
+                Console.WriteLine("\n\tRead\n {0}", family);
             }
 
             // Delete the document
             docDb.DeleteFamilyDocument(Families.Andersen.Id).Wait();
             docDb.DeleteDatabaseAsync().Wait();
-
         }        
     }
 }
