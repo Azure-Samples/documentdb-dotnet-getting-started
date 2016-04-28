@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace DocumentDB.DbSchema
+﻿namespace DocumentDB.DbSchema
 {
     /// <summary>
     /// A parent class used within Family
