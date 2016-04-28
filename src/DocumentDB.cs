@@ -159,7 +159,7 @@ namespace DocumentDB.GetStarted
         {
             return this.client.CreateDocumentQuery<Family>(
                 UriFactory.CreateDocumentCollectionUri(dbName, collName),
-                "SELECT * FROM Family WHERE Family.lastName = '" + LastName + "'",
+                "SELECT * FROM Family WHERE Family.LastName = '" + LastName + "'",
                 queryOptions);            
         }
 
