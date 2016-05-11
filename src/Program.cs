@@ -293,7 +293,7 @@ namespace DocumentDB.GetStarted
                 queryOptions);
 
             Console.WriteLine("Running direct SQL query...");
-            foreach (Family family in familyQuery)
+            foreach (Family family in familyQueryInSql)
             {
                 Console.WriteLine("\tRead {0}", family);
             }
