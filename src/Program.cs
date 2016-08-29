@@ -80,9 +80,9 @@ namespace DocumentDB.GetStarted
             // Create a new instance of the DocumentClient
             this.client = new DocumentClient(new Uri(EndpointUri), PrimaryKey);
 
-            await this.CreateDatabaseIfNotExists("FamilyDB");
+            await this.CreateDatabaseIfNotExists("FamilyDB_og");
 
-            await this.CreateDocumentCollectionIfNotExists("FamilyDB", "FamilyCollection");
+            await this.CreateDocumentCollectionIfNotExists("FamilyDB_og", "FamilyCollection_og");
 
             // Insert a document, here we create a Family object
             Family andersenFamily = new Family
@@ -111,7 +111,7 @@ namespace DocumentDB.GetStarted
                 IsRegistered = true
             };
 
-            await this.CreateFamilyDocumentIfNotExists("FamilyDB", "FamilyCollection", andersenFamily);
+            await this.CreateFamilyDocumentIfNotExists("FamilyDB_og", "FamilyCollection_og", andersenFamily);
 
             Family wakefieldFamily = new Family
             {
@@ -148,22 +148,22 @@ namespace DocumentDB.GetStarted
                 IsRegistered = false
             };
 
-            await this.CreateFamilyDocumentIfNotExists("FamilyDB", "FamilyCollection", wakefieldFamily);
+            await this.CreateFamilyDocumentIfNotExists("FamilyDB_og", "FamilyCollection_og", wakefieldFamily);
 
-            this.ExecuteSimpleQuery("FamilyDB", "FamilyCollection");
+            this.ExecuteSimpleQuery("FamilyDB_og", "FamilyCollection_og");
 
             // Update the Grade of the Andersen Family child
             andersenFamily.Children[0].Grade = 6;
 
-            await this.ReplaceFamilyDocument("FamilyDB", "FamilyCollection", "Andersen.1", andersenFamily);
+            await this.ReplaceFamilyDocument("FamilyDB_og", "FamilyCollection_og", "Andersen.1", andersenFamily);
 
-            this.ExecuteSimpleQuery("FamilyDB", "FamilyCollection");
+            this.ExecuteSimpleQuery("FamilyDB_og", "FamilyCollection_og");
 
             // Delete the document
-            await this.DeleteFamilyDocument("FamilyDB", "FamilyCollection", "Andersen.1");
+            await this.DeleteFamilyDocument("FamilyDB_og", "FamilyCollection_og", "Andersen.1");
 
             // Clean up/delete the database and client
-            await this.client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri("FamilyDB"));
+            await this.client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri("FamilyDB_og"));
         }
 
         /// <summary>
