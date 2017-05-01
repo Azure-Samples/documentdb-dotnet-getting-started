@@ -30,7 +30,7 @@ namespace DocumentDB.GetStarted
         /// <summary>
         /// The Azure DocumentDB endpoint for running this GetStarted sample.
         /// </summary>
-        private static readonly string EndpointUri = ConfigurationManager.AppSettings["EndPointUri"];
+        private static readonly string EndpointUri = ConfigurationManager.AppSettings["EndPointUrl"];
 
         /// <summary>
         /// The primary key for the Azure DocumentDB account.
