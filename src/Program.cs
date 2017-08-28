@@ -56,12 +56,11 @@ namespace DocumentDB.GetStarted
             catch (DocumentClientException de)
             {
                 Exception baseException = de.GetBaseException();
-                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+                Console.WriteLine("{0} error occurred: {1}", de.StatusCode, de);
             }
             catch (Exception e)
             {
-                Exception baseException = e.GetBaseException();
-                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+                Console.WriteLine("Error: {0}", e);
             }
             finally
             {
@@ -71,7 +70,7 @@ namespace DocumentDB.GetStarted
         }
 
         /// <summary>
-        /// Run the get started demo for Azure DocumentDB. This creates a database, collection, two documents, executes a simple query 
+        /// Run the get started demo for Azure Cosmos DB. This creates a database, collection, two documents, executes a simple query 
         /// and cleans up.
         /// </summary>
         /// <returns>The Task for asynchronous completion.</returns>
@@ -80,28 +79,45 @@ namespace DocumentDB.GetStarted
             // Create a new instance of the DocumentClient
             this.client = new DocumentClient(new Uri(EndpointUri), PrimaryKey);
 
-            await this.CreateDatabaseIfNotExists("FamilyDB_og");
+            Database databaseInfo = new Database { Id = "FamilyDB_og" };
+            await this.client.CreateDatabaseIfNotExistsAsync(databaseInfo);
 
-            await this.CreateDocumentCollectionIfNotExists("FamilyDB_og", "FamilyCollection_og");
+            DocumentCollection collectionInfo = new DocumentCollection();
+            collectionInfo.Id = "FamilyCollection_og";
+
+            // We choose LastName as the partition key since we're storing family information. Data is seamlessly scaled out based on the last name of
+            // the inserted entity.
+            collectionInfo.PartitionKey.Paths.Add("/LastName");
+
+            // Optionally, you can configure the indexing policy of a collection. Here we configure collections for maximum query flexibility 
+            // including string range queries. 
+            collectionInfo.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
+
+            // Collections can be reserved with throughput specified in request units/second. 1 RU is a normalized request equivalent to the read
+            // of a 1KB document.  Here we create a collection with 400 RU/s. 
+            await this.client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(databaseInfo.Id),
+                collectionInfo,
+                new RequestOptions { OfferThroughput = 400 });
 
             // Insert a document, here we create a Family object
             Family andersenFamily = new Family
             {
                 Id = "Andersen.1",
                 LastName = "Andersen",
-                Parents = new Parent[] 
+                Parents = new Parent[]
                 {
                     new Parent { FirstName = "Thomas" },
                     new Parent { FirstName = "Mary Kay" }
                 },
-                Children = new Child[] 
+                Children = new Child[]
                 {
                     new Child
                     {
                         FirstName = "Henriette Thaulow",
                         Gender = "female",
                         Grade = 5,
-                        Pets = new Pet[] 
+                        Pets = new Pet[]
                         {
                             new Pet { GivenName = "Fluffy" }
                         }
@@ -155,88 +171,19 @@ namespace DocumentDB.GetStarted
             // Update the Grade of the Andersen Family child
             andersenFamily.Children[0].Grade = 6;
 
-            await this.ReplaceFamilyDocument("FamilyDB_og", "FamilyCollection_og", "Andersen.1", andersenFamily);
+            await this.ReplaceFamilyDocument("FamilyDB_og", "FamilyCollection_og", andersenFamily);
 
             this.ExecuteSimpleQuery("FamilyDB_og", "FamilyCollection_og");
 
             // Delete the document
-            await this.DeleteFamilyDocument("FamilyDB_og", "FamilyCollection_og", "Andersen.1");
+            await this.DeleteFamilyDocument("FamilyDB_og", "FamilyCollection_og", "Andersen", "Andersen.1");
 
             // Clean up/delete the database and client
             await this.client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri("FamilyDB_og"));
         }
 
         /// <summary>
-        /// Create a database with the specified name if it doesn't exist. 
-        /// </summary>
-        /// <param name="databaseName">The name/ID of the database.</param>
-        /// <returns>The Task for asynchronous execution.</returns>
-        private async Task CreateDatabaseIfNotExists(string databaseName)
-        {
-            // Check to verify a database with the id=FamilyDB does not exist
-            try
-            {
-                await this.client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
-                this.WriteToConsoleAndPromptToContinue("Found {0}", databaseName);
-            }
-            catch (DocumentClientException de)
-            {
-                // If the database does not exist, create a new database
-                if (de.StatusCode == HttpStatusCode.NotFound)
-                {
-                    await this.client.CreateDatabaseAsync(new Database { Id = databaseName });
-                    this.WriteToConsoleAndPromptToContinue("Created {0}", databaseName);
-                }
-                else
-                {
-                    throw;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Create a collection with the specified name if it doesn't exist.
-        /// </summary>
-        /// <param name="databaseName">The name/ID of the database.</param>
-        /// <param name="collectionName">The name/ID of the collection.</param>
-        /// <returns>The Task for asynchronous execution.</returns>
-        private async Task CreateDocumentCollectionIfNotExists(string databaseName, string collectionName)
-        {
-            try
-            {
-                await this.client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseName, collectionName));
-                this.WriteToConsoleAndPromptToContinue("Found {0}", collectionName);
-            }
-            catch (DocumentClientException de)
-            {
-                // If the document collection does not exist, create a new collection
-                if (de.StatusCode == HttpStatusCode.NotFound)
-                {
-                    DocumentCollection collectionInfo = new DocumentCollection();
-                    collectionInfo.Id = collectionName;
-
-                    // Optionally, you can configure the indexing policy of a collection. Here we configure collections for maximum query flexibility 
-                    // including string range queries. 
-                    collectionInfo.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
-
-                    // DocumentDB collections can be reserved with throughput specified in request units/second. 1 RU is a normalized request equivalent to the read
-                    // of a 1KB document.  Here we create a collection with 400 RU/s. 
-                    await this.client.CreateDocumentCollectionAsync(
-                        UriFactory.CreateDatabaseUri(databaseName),
-                        new DocumentCollection { Id = collectionName },
-                        new RequestOptions { OfferThroughput = 400 });
-
-                    this.WriteToConsoleAndPromptToContinue("Created {0}", collectionName);
-                }
-                else
-                {
-                    throw;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Create the Family document in the collection if another by the same ID doesn't already exist.
+        /// Create the Family document in the collection if another by the same partition key/item key doesn't already exist.
         /// </summary>
         /// <param name="databaseName">The name/ID of the database.</param>
         /// <param name="collectionName">The name/ID of the collection.</param>
@@ -246,7 +193,7 @@ namespace DocumentDB.GetStarted
         {
             try
             {
-                await this.client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, family.Id));
+                await this.client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, family.Id), new RequestOptions { PartitionKey = new PartitionKey(family.LastName) });
                 this.WriteToConsoleAndPromptToContinue("Found {0}", family.Id);
             }
             catch (DocumentClientException de)
@@ -307,15 +254,14 @@ namespace DocumentDB.GetStarted
         /// </summary>
         /// <param name="databaseName">The name/ID of the database.</param>
         /// <param name="collectionName">The name/ID of the collection.</param>
-        /// <param name="familyName">The name/ID of the document</param>
         /// <param name="updatedFamily">The family document to be replaced.</param>
         /// <returns>The Task for asynchronous execution.</returns>
-        private async Task ReplaceFamilyDocument(string databaseName, string collectionName, string familyName, Family updatedFamily)
+        private async Task ReplaceFamilyDocument(string databaseName, string collectionName, Family updatedFamily)
         {
             try
             {
-                await this.client.ReplaceDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, familyName), updatedFamily);
-                this.WriteToConsoleAndPromptToContinue("Replaced Family {0}", familyName);
+                await this.client.ReplaceDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, updatedFamily.Id), updatedFamily);
+                this.WriteToConsoleAndPromptToContinue("Replaced Family [{0},{1}]", updatedFamily.LastName, updatedFamily.Id);
             }
             catch (DocumentClientException de)
             {
@@ -328,18 +274,19 @@ namespace DocumentDB.GetStarted
         /// </summary>
         /// <param name="databaseName">The name/ID of the database.</param>
         /// <param name="collectionName">The name/ID of the collection.</param>
-        /// <param name="documentName">The name/ID of the document.</param>
+        /// <param name="partitionKey">The partition key of the document.</param>
+        /// <param name="documentKey">The document key of the document.</param>
         /// <returns>The Task for asynchronous execution.</returns>
-        private async Task DeleteFamilyDocument(string databaseName, string collectionName, string documentName)
+        private async Task DeleteFamilyDocument(string databaseName, string collectionName, string partitionKey, string documentKey)
         {
             try
             {
-                await this.client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, documentName));
-                Console.WriteLine("Deleted Family {0}", documentName);
+                await this.client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, documentKey), new RequestOptions { PartitionKey = new PartitionKey(partitionKey) });
+                Console.WriteLine("Deleted Family [{0},{1}]", partitionKey, documentKey);
             }
             catch (DocumentClientException de)
             {
-                    throw de;
+                throw de;
             }
         }
 
