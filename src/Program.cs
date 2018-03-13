@@ -258,15 +258,8 @@ namespace DocumentDB.GetStarted
         /// <returns>The Task for asynchronous execution.</returns>
         private async Task ReplaceFamilyDocument(string databaseName, string collectionName, Family updatedFamily)
         {
-            try
-            {
-                await this.client.ReplaceDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, updatedFamily.Id), updatedFamily);
-                this.WriteToConsoleAndPromptToContinue("Replaced Family [{0},{1}]", updatedFamily.LastName, updatedFamily.Id);
-            }
-            catch (DocumentClientException de)
-            {
-                throw de;
-            }
+            await this.client.ReplaceDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, updatedFamily.Id), updatedFamily);
+            this.WriteToConsoleAndPromptToContinue("Replaced Family [{0},{1}]", updatedFamily.LastName, updatedFamily.Id);
         }
 
         /// <summary>
@@ -279,15 +272,8 @@ namespace DocumentDB.GetStarted
         /// <returns>The Task for asynchronous execution.</returns>
         private async Task DeleteFamilyDocument(string databaseName, string collectionName, string partitionKey, string documentKey)
         {
-            try
-            {
-                await this.client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, documentKey), new RequestOptions { PartitionKey = new PartitionKey(partitionKey) });
-                Console.WriteLine("Deleted Family [{0},{1}]", partitionKey, documentKey);
-            }
-            catch (DocumentClientException de)
-            {
-                throw de;
-            }
+            await this.client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, documentKey), new RequestOptions { PartitionKey = new PartitionKey(partitionKey) });
+            Console.WriteLine("Deleted Family [{0},{1}]", partitionKey, documentKey);
         }
 
         /// <summary>
