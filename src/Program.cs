@@ -65,7 +65,7 @@ namespace DocumentDB.GetStarted
             finally
             {
                 Console.WriteLine("End of demo, press any key to exit.");
-                Console.ReadKey();
+                Console.ReadKey(true);
             }
         }
 
@@ -246,7 +246,7 @@ namespace DocumentDB.GetStarted
             }
 
             Console.WriteLine("Press any key to continue ...");
-            Console.ReadKey();
+            Console.ReadKey(true);
         }
 
         /// <summary>
@@ -285,7 +285,7 @@ namespace DocumentDB.GetStarted
         {
             Console.WriteLine(format, args);
             Console.WriteLine("Press any key to continue ...");
-            Console.ReadKey();
+            Console.ReadKey(true);
         }
 
         /// <summary>
